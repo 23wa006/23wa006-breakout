@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Breakout DQN Lab — Learn by Playing</title>
+  <!-- Neural network implemented in JavaScript below; no external libraries or internet required. -->
+  <style>
+    :root{--bg:#0c1120;--panel:#151d31;--panel2:#1b2640;--stroke:#293751;--muted:#9aabc4;--text:#edf3ff;--mint:#4bd7bc;--blue:#77adff;--orange:#ffbd6b;--pink:#ff798e}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 10% 0%,#172a43 0%,transparent 50%),var(--bg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text)}
+    .wrap{max-width:1310px;margin:auto;padding:26px 22px 60px}.top{display:flex;justify-content:space-between;align-items:start;gap:20px;margin-bottom:24px;flex-wrap:wrap}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--mint);font-weight:800}.top h1{margin:5px 0 5px;font-size:clamp(28px,3vw,40px);letter-spacing:-.035em}.top p{margin:0;max-width:650px;color:var(--muted)}.pill{display:flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid var(--stroke);background:var(--panel);border-radius:50px;font-size:12px;color:var(--muted)}.dot{background:#f8c468;width:8px;height:8px;border-radius:50%;box-shadow:0 0 10px #f8c46888}
+    .layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(350px,.9fr);gap:17px}.stack{display:flex;flex-direction:column;gap:17px}.card{background:linear-gradient(155deg,#172238,#141c2d);border:1px solid var(--stroke);border-radius:17px;box-shadow:0 14px 40px #0002;overflow:hidden}.cardpad{padding:20px}.card h2{font-size:17px;margin:0 0 3px;letter-spacing:-.02em}.sub{color:var(--muted);font-size:12px;margin:0 0 15px}.cardhead{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.tag{font-weight:700;border:1px solid #2b7a71;color:#8df2dc;background:#143d3c;padding:3px 9px;font-size:11px;border-radius:30px}
+    .tabbar{display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap}.btn{border:1px solid #43506a;background:#26324a;color:var(--text);font:600 13px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;border-radius:10px;padding:11px 13px;cursor:pointer;transition:background .15s,transform .15s}.btn:hover:not(:disabled){background:#334362;transform:translateY(-1px)}.btn:disabled{opacity:.4;cursor:not-allowed}.btn.primary{background:var(--mint);color:#082c29;border-color:var(--mint)}.btn.primary:hover:not(:disabled){background:#91f3df}.btn.active{background:#274f5d;border-color:#39bda8}.btn.warn{border-color:#784b53;color:#ffa6af}.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.controls .btn{flex:1 1 112px}.game-shell{background:#080f1d;border:1px solid #334263;border-radius:12px;overflow:hidden;position:relative}#game{width:100%;height:auto;display:block;aspect-ratio:520/390}.overlay-status{position:absolute;top:9px;left:9px;z-index:1;background:#090f1ccf;border:1px solid #40506a;border-radius:9px;font-size:11px;padding:5px 9px}kbd{border:1px solid #64718b;background:#18253b;border-radius:4px;padding:2px 6px;font-size:11px}.smallrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-top:12px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:15px 0}.stat{background:var(--panel2);padding:12px 10px;border-radius:10px;border:1px solid var(--stroke)}.stat .label{color:var(--muted);font-size:10px}.stat strong{display:block;font-size:22px;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.025em}
+    .bars{display:grid;gap:9px;margin:14px 0}.barline{display:grid;grid-template-columns:83px 1fr 51px;align-items:center;gap:10px;font-size:12px;color:var(--muted)}.bartrack{height:13px;background:#263349;border-radius:30px;overflow:hidden}.barfill{height:100%;width:0%;background:var(--blue);transition:width .15s}.barline.chosen .barfill{background:var(--mint)}.barline.chosen{color:var(--mint);font-weight:700}.qvalue{font-variant-numeric:tabular-nums;text-align:right}.net-svg{background:#111a2b;border:1px solid #2b3850;border-radius:10px;width:100%;height:130px;display:block}.note{font-size:12px;color:var(--muted);line-height:1.6}.sequence{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:14px 0}.seqitem{text-align:center;background:#1c2941;border:1px solid #334660;border-radius:8px;padding:9px 4px;font-size:11px;color:#bccce3}.seqitem.on{border-color:var(--mint);background:#153a3c;color:#a7ffe8}.steps-info{padding:11px 12px;background:#111a2a;border-radius:10px;border:1px solid var(--stroke);font-size:12px;color:#d3e1f6;min-height:48px}.formula{margin-top:10px;border:1px solid #2d5671;background:#102b3e;border-radius:9px;padding:12px;font:12px/1.8 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto;white-space:pre-wrap}.hidden{display:none}.chart{width:100%;height:auto;display:block;background:#101a2b;border:1px solid var(--stroke);border-radius:10px}.chartLegend{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--muted);margin:10px 0 0}.swatch{width:12px;height:3px;display:inline-block;margin-right:6px;vertical-align:middle;background:var(--mint)}.swatch.raw{background:var(--orange)}
+    .sliderrow{margin-bottom:16px}.sliderhead{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:5px}.sliderhead output{color:var(--mint);font-variant-numeric:tabular-nums;font-weight:700}.sliderrow small{color:var(--muted);font-size:11px;display:block;line-height:1.4;margin-top:1px}input[type=range]{width:100%;accent-color:var(--mint);cursor:pointer}.settingsgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}.field{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:4px 0 12px}.field input{accent-color:var(--mint)}select{background:#26324a;border:1px solid #42516a;padding:8px;color:white;border-radius:8px}.rewardgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.reward{border:1px solid var(--stroke);background:#1c2940;text-align:center;padding:9px 4px;border-radius:8px}.reward b{display:block;color:var(--mint);font-size:18px}.reward small{color:var(--muted);font-size:10px}.bottom{margin-top:17px}.bottom .cardpad{padding:20px}.columns{display:grid;grid-template-columns:1fr 1fr;gap:18px}.columns h3{margin:0 0 7px;font-size:14px}.columns p,.columns li{color:var(--muted);font-size:12px}.columns ol{padding-left:20px;margin:7px 0}.footer{font-size:11px;color:var(--muted);margin-top:15px}.error{color:#ff9b9f}.ok{color:#81e4cb}
+    @media(max-width:900px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(4,1fr)}}@media(max-width:520px){.wrap{padding:16px 10px 40px}.cardpad{padding:14px}.stats{grid-template-columns:repeat(2,1fr)}.settingsgrid,.columns{grid-template-columns:1fr}.rewardgrid{grid-template-columns:repeat(2,1fr)}.sequence{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><div class="eyebrow">Reinforcement learning · Learn by doing</div><h1>Breakout <span style="color:var(--mint)">DQN Lab</span></h1><p>Play the game. Watch a neural network choose actions. Train an AI to catch the ball through trial and error.</p></div>
+    <div class="pill"><span class="dot" id="readyDot"></span><span id="ready">Offline neural network starting…</span></div>
+  </header>
+  <main class="layout">
+    <div class="stack">
+      <section class="card"><div class="cardpad">
+        <div class="tabbar"><button id="humanBtn" class="btn active">Round 1 · You play</button><button id="aiBtn" class="btn">Round 2 · AI learns</button></div>
+        <div class="cardhead"><h2>Breakout arena</h2><span id="gameMode" class="tag">HUMAN MODE</span></div>
+        <p class="sub" id="gameHelp">Use ← and → to move your paddle. Your moves generate experiences too.</p>
+        <div class="game-shell"><div class="overlay-status" id="scoreOverlay">Score 0 · 28 bricks</div><canvas id="game" width="520" height="390" aria-label="Breakout game canvas">Canvas is required to play.</canvas></div>
+        <div class="smallrow"><span id="lastReward">Last reward: 0.00</span><span id="lastEvent">Catch the ball!</span></div>
+        <div class="controls">
+          <button class="btn primary" id="autoBtn">▶ Start AI · continuous</button><button class="btn" id="stepBtn">One AI step</button><button class="btn" id="watchBtn">Watch one try</button><button class="btn primary" id="train100">Train 100 tries</button><button class="btn" id="train1000">Train 1,000</button><button class="btn" id="testBtn">Test trained AI</button><button class="btn" id="pauseBtn">Pause</button>
+        </div>
+        <div class="smallrow"><span><label for="speed">Speed</label> <select id="speed"><option value="1">Slow — teach</option><option value="4" selected>Normal</option><option value="12">Fast</option><option value="30">Very fast</option></select></span><button class="btn" id="newEpisode">↻ Restart / Play again</button></div>
+        <p class="note" id="runMessage">In Round 2, try “Watch one try,” then “Train 100 tries.” Training uses real gradient updates, not a prerecorded animation. The AI runs entirely offline.</p>
+      </div></section>
+      <section class="card"><div class="cardpad">
+        <div class="cardhead"><h2>What the agent just learned</h2><span class="tag" id="episodeTag">Episode 0</span></div>
+        <p class="sub">Learning progress updates after each completed AI training episode.</p>
+        <div class="stats"><div class="stat"><div class="label">Completed episodes</div><strong id="episodeStat">0</strong></div><div class="stat"><div class="label">Average reward (20)</div><strong id="avgStat">—</strong></div><div class="stat"><div class="label">Exploration ε</div><strong id="epsStat">1.00</strong></div><div class="stat"><div class="label">Training loss</div><strong id="lossStat">—</strong></div></div>
+        <canvas class="chart" width="720" height="190" id="rewardChart" aria-label="Episode rewards graph"></canvas>
+        <div class="chartLegend"><span><span class="swatch raw"></span>Reward / episode</span><span><span class="swatch"></span>20-episode average</span></div>
+        <p class="note" id="resultsNote">No training yet. Improvement is not guaranteed; change the settings and compare repeated runs.</p>
+      </div></section>
+      <section class="card"><div class="cardpad">
+        <h2>AI personality · Experiment</h2><p class="sub">Change the parameters, then see how the agent behaves.</p>
+        <div class="settingsgrid">
+          <div><div class="sliderrow"><div class="sliderhead"><label for="lr">Learning rate</label><output id="lrOut">0.0010</output></div><input id="lr" type="range" min="0.0001" max="0.005" value="0.001" step="0.0001"><small>How quickly the neural network's weights change (takes effect on reset).</small></div>
+          <div class="sliderrow"><div class="sliderhead"><label for="gamma">Patience (γ)</label><output id="gammaOut">0.97</output></div><input id="gamma" type="range" min="0" max="0.999" value="0.97" step="0.001"><small>How much future rewards matter when updating a Q-value.</small></div></div>
+          <div><div class="sliderrow"><div class="sliderhead"><label for="epsilon">Curiosity (ε)</label><output id="epsilonOut">1.00</output></div><input id="epsilon" type="range" min="0" max="1" value="1" step="0.01"><small>Probability of trying a random action rather than the predicted best one.</small></div>
+          <div class="sliderrow"><div class="sliderhead"><label for="decay">Curiosity decay</label><output id="decayOut">0.985</output></div><input id="decay" type="range" min="0.95" max="1" value="0.985" step="0.001"><small>Applied after each episode; 1 means no automatic decay.</small></div></div>
+        </div>
+        <div class="field"><label><input id="shaping" type="checkbox" checked> Guided training: small reward for aligning with a falling ball</label></div>
+        <div class="controls"><button class="btn warn" id="forgetBtn">Forget everything · new network</button></div>
+        <p class="note">The game uses a small numerical state instead of raw Atari pixels, so students can train it in a browser. Restarting the network resets weights, replay memory, and training history.</p>
+      </div></section>
+    </div>
+    <div class="stack">
+      <section class="card"><div class="cardpad">
+        <h2>Inside the Deep Q-Network</h2><p class="sub">11 observed features → 48 neurons → 48 neurons → 3 action values</p>
+        <svg class="net-svg" id="networkSvg" viewBox="0 0 500 130" role="img" aria-label="Neural network diagram showing inputs, hidden layers and three output actions"></svg>
+        <div class="smallrow" style="margin-top:6px"><span>Observations</span><span>Neural network</span><span>Q(left, stay, right)</span></div>
+        <div class="bars">
+          <div class="barline" data-i="0"><span>← LEFT</span><div class="bartrack"><div class="barfill" id="qbar0"></div></div><span class="qvalue" id="q0">0.000</span></div>
+          <div class="barline" data-i="1"><span>● STAY</span><div class="bartrack"><div class="barfill" id="qbar1"></div></div><span class="qvalue" id="q1">0.000</span></div>
+          <div class="barline" data-i="2"><span>RIGHT →</span><div class="bartrack"><div class="barfill" id="qbar2"></div></div><span class="qvalue" id="q2">0.000</span></div>
+        </div>
+        <div class="steps-info" id="decisionInfo">Waiting for the neural network. Q-values represent predicted discounted future reward, not probabilities.</div>
+        <p class="note">The dots above are a visual summary of the network. Actual training uses two fully connected layers of 48 neurons each. A separate target network provides stable Bellman targets.</p>
+      </div></section>
+      <section class="card"><div class="cardpad">
+        <h2>See one DQN learning step</h2><p class="sub">Observe → Decide → Act → Reward → Remember → Train</p>
+        <div class="sequence" id="sequence"><div class="seqitem on">1 · Observe</div><div class="seqitem">2 · Predict Q</div><div class="seqitem">3 · Explore/Act</div><div class="seqitem">4 · Reward</div><div class="seqitem">5 · Replay memory</div><div class="seqitem">6 · Bellman target</div><div class="seqitem">7 · Update weights</div><div class="seqitem">8 · Repeat</div></div>
+        <div class="steps-info" id="stepInfo">At each frame, the agent observes the game and predicts a value for each action.</div>
+        <div class="smallrow"><label><input id="showMath" type="checkbox"> Show the math for a sampled training experience</label><span id="replayCount">Replay: 0 / 6,000</span></div>
+        <div class="formula hidden" id="mathBox">y = r + γ × max Q_target(next state, action)</div>
+      </div></section>
+      <section class="card"><div class="cardpad">
+        <h2>Rewards</h2><p class="sub">A reward is feedback, not a command.</p>
+        <div class="rewardgrid"><div class="reward"><b>+2</b><small>Destroy a brick</small></div><div class="reward"><b>+1</b><small>Catch the ball</small></div><div class="reward"><b style="color:var(--pink)">−4</b><small>Miss the ball</small></div><div class="reward"><b>+12</b><small>Clear the wall</small></div></div>
+        <p class="note">Every frame also costs −0.002. With “Guided training” enabled, moving toward the predicted landing point earns a very small additional shaping reward. Changing reward definitions is a good extension exercise.</p>
+      </div></section>
+      <section class="card"><div class="cardpad"><h2>Prediction questions</h2><p class="sub">Ask students before changing a setting:</p><div class="note">① If curiosity starts at zero, what does the AI never discover?<br>② Does high patience help it pursue distant bricks?<br>③ Does a low training loss always mean a good game score?<br>④ Why could an agent learn to catch the ball but fail to clear all bricks?</div></div></section>
+    </div>
+  </main>
+  <section class="card bottom"><div class="cardpad columns"><div><h3>Suggested classroom activity</h3><ol><li>Play in Human mode for 30 seconds; identify state, actions and reward.</li><li>Switch to AI mode and watch one untrained game.</li><li>Train 100 episodes and compare the reward chart and paddle movement.</li><li>Test with exploration turned off, then reset the network and change γ or ε.</li></ol></div><div><h3>What this demonstration actually implements</h3><p>Real, browser-side Deep Q-Learning implemented with a small JavaScript neural network: online DQN, replay buffer, random minibatches, epsilon-greedy exploration, Bellman training targets, and a periodically copied target network. It is a simplified educational Breakout environment, not an Atari emulator or a pixel-based convolutional DQN. Training outcomes vary between runs.</p><p>Works offline, including AI training. Game data never leaves your browser.</p></div></div></section>
+  <div class="footer">Breakout DQN Lab · Educational demonstration · Keyboard: ← / → or A / D · Space toggles pause</div>
+</div>
+<script>
+'use strict';
+// ===========================================================
+// 1. BREAKOUT ENVIRONMENT: state, actions, rewards, transitions
+// ===========================================================
+const W=520,H=390,BR=6,ROWS=4,COLS=7,NUM_BRICKS=ROWS*COLS,PW=88,PY=356;
+const ACTIONS=['LEFT','STAY','RIGHT'];
+const $=id=>document.getElementById(id);
+const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
+const rand=(a,b)=>a+Math.random()*(b-a);
+const tick=()=>new Promise(resolve=>requestAnimationFrame(resolve));
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function projectX(x,vx,vy,y){
+  if(vy<=0)return x; // Projection most useful while descending.
+  const travel=(PY-y)/vy;
+  let projected=x+vx*Math.max(0,travel);
+  const period=2*(W-2*BR);
+  projected=((projected-BR)%period+period)%period;
+  return BR+(projected>W-2*BR?period-projected:projected);
+}
+class Breakout {
+  constructor(){this.reset();}
+  reset(){
+    this.px=(W-PW)/2;
+    this.ball={x:W/2,y:PY-30,vx:rand(-2,2),vy:-3.6};
+    if(Math.abs(this.ball.vx)<0.8)this.ball.vx=this.ball.vx<0?-1.4:1.4;
+    this.bricks=[];
+    const gap=5,bw=(W-44-(COLS-1)*gap)/COLS;
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)this.bricks.push({x:22+c*(bw+gap),y:39+r*24,w:bw,h:16,alive:true,r,c});
+    this.score=0;this.bricksLeft=NUM_BRICKS;this.steps=0;this.totalReward=0;this.done=false;this.lastEvent='New game';this.lastReward=0;
+  }
+  observe(){
+    const b=this.ball, cx=this.px+PW/2, pred=projectX(b.x,b.vx,b.vy,b.y);
+    const alive=this.bricks.filter(q=>q.alive);
+    const density=[0,1,2].map(k=>alive.filter(q=>Math.floor(q.c*3/COLS)===k).length/(ROWS*3));
+    return [b.x/W,b.y/H,b.vx/5,b.vy/5,cx/W,(b.x-cx)/W,pred/W,this.bricksLeft/NUM_BRICKS,...density];
+  }
+  step(action, guided=false){
+    if(this.done)return {reward:0,done:true,event:'Episode ended'};
+    this.steps++;
+    const b=this.ball;
+    const targetX=projectX(b.x,b.vx,b.vy,b.y);
+    const before=Math.abs(this.px+PW/2-targetX);
+    this.px=clamp(this.px+(action-1)*7,0,W-PW);
+    let reward=-0.002, event='Ball in flight';
+    // Small potential-style guidance for learning paddle positioning.
+    if(guided && b.vy>0 && b.y>H*0.42){
+      const after=Math.abs(this.px+PW/2-targetX);
+      reward+=clamp((before-after)/PW*0.025,-0.002,0.002);
+    }
+    const oldX=b.x,oldY=b.y;
+    b.x+=b.vx;b.y+=b.vy;
+    if(b.x<BR){b.x=BR;b.vx=Math.abs(b.vx)}
+    if(b.x>W-BR){b.x=W-BR;b.vx=-Math.abs(b.vx)}
+    if(b.y<BR){b.y=BR;b.vy=Math.abs(b.vy)}
+    for(const brick of this.bricks){
+      if(!brick.alive)continue;
+      if(b.x+BR>brick.x&&b.x-BR<brick.x+brick.w&&b.y+BR>brick.y&&b.y-BR<brick.y+brick.h){
+        brick.alive=false;this.bricksLeft--;this.score++;reward+=2;event='Brick destroyed! +2';
+        if(oldY+BR<=brick.y ||oldY-BR>=brick.y+brick.h)b.vy*=-1;
+        else b.vx*=-1;
+        break; // only one collision per simulation frame
+      }
+    }
+    if(b.vy>0 && oldY+BR<=PY && b.y+BR>=PY && b.x+BR>=this.px && b.x-BR<=this.px+PW){
+      b.y=PY-BR;
+      const angle=clamp((b.x-(this.px+PW/2))/(PW/2),-1,1);
+      const speed=clamp(Math.hypot(b.vx,b.vy)*1.003,3.8,5.0);
+      b.vx=speed*Math.sin(angle*1.07);
+      b.vy=-Math.max(2.2,Math.abs(speed*Math.cos(angle*1.07)));
+      reward+=1;event='Paddle catch! +1';
+    }
+    if(this.bricksLeft===0){reward+=12;this.done=true;event='Wall cleared! +12'}
+    else if(b.y-BR>H){reward-=4;this.done=true;event='Missed the ball −4'}
+    else if(this.steps>=1800){reward-=2;this.done=true;event='Time limit −2'}
+    this.lastReward=reward;this.totalReward+=reward;this.lastEvent=event;
+    return {reward,done:this.done,event};
+  }
+}
+// ===========================================================
+// 2. REAL, OFFLINE DQN: 11 -> 48 -> 48 -> 3, replay and Adam
+//    No CDN: the model trains with true backpropagation in JS.
+// ===========================================================
+class TinyMLP {
+  constructor(copy=null){
+    const sizes=[11,48,48,3];
+    this.layers=[];this.t=0;
+    for(let i=0;i<sizes.length-1;i++){
+      const input=sizes[i],output=sizes[i+1],count=input*output;
+      const w=new Float32Array(count),b=new Float32Array(output);
+      const scale=Math.sqrt(2/input);
+      for(let j=0;j<count;j++)w[j]=(Math.random()*2-1)*scale;
+      this.layers.push({input,output,w,b,
+        mw:new Float32Array(count),vw:new Float32Array(count),
+        mb:new Float32Array(output),vb:new Float32Array(output)});
+    }
+    if(copy)this.copyFrom(copy);
+  }
+  copyFrom(model){
+    for(let i=0;i<this.layers.length;i++){
+      this.layers[i].w.set(model.layers[i].w);
+      this.layers[i].b.set(model.layers[i].b);
+    }
+  }
+  forward(state,withCache=false){
+    let input=state;
+    const activations=withCache?[state]:null;
+    for(let i=0;i<this.layers.length;i++){
+      const layer=this.layers[i],out=new Float32Array(layer.output);
+      for(let j=0;j<layer.output;j++){
+        let v=layer.b[j];const row=j*layer.input;
+        for(let k=0;k<layer.input;k++)v+=layer.w[row+k]*input[k];
+        out[j]=i===this.layers.length-1?v:Math.max(0,v);
+      }
+      input=out;if(withCache)activations.push(out);
+    }
+    return withCache?{out:input,a:activations}:input;
+  }
+  // Huber TD error: robust to large rewards and unstable targets.
+  trainExamples(items,targetNet,gamma,learningRate){
+    const grads=this.layers.map(l=>({w:new Float32Array(l.w.length),b:new Float32Array(l.b.length)}));
+    let totalLoss=0;
+    let sample=null;
+    for(const e of items){
+      const pred=this.forward(e.s,true),future=targetNet.forward(e.ns);
+      const maxNext=Math.max(future[0],future[1],future[2]);
+      const target=e.r+(e.done?0:gamma*maxNext);
+      const error=pred.out[e.a]-target;
+      const abs=Math.abs(error);
+      totalLoss+=abs<=1?0.5*error*error:abs-0.5;
+      if(!sample)sample={r:e.r,done:e.done,discount:gamma,maxNext,target,old:pred.out[e.a],action:e.a};
+      // Gradient wrt three output values, only the chosen action.
+      let delta=new Float32Array(3);
+      delta[e.a]=Math.max(-1,Math.min(1,error))/items.length;
+      for(let l=this.layers.length-1;l>=0;l--){
+        const layer=this.layers[l],g=grads[l],prev=pred.a[l];
+        for(let j=0;j<layer.output;j++){
+          g.b[j]+=delta[j];const row=j*layer.input;
+          for(let k=0;k<layer.input;k++)g.w[row+k]+=delta[j]*prev[k];
+        }
+        if(l>0){
+          const earlier=new Float32Array(layer.input);
+          for(let k=0;k<layer.input;k++){
+            let sum=0;
+            for(let j=0;j<layer.output;j++)sum+=layer.w[j*layer.input+k]*delta[j];
+            earlier[k]=pred.a[l][k]>0?sum:0;
+          }
+          delta=earlier;
+        }
+      }
+    }
+    this.t++;
+    const b1=.9,b2=.999,correction1=1-Math.pow(b1,this.t),correction2=1-Math.pow(b2,this.t);
+    for(let l=0;l<this.layers.length;l++){
+      const layer=this.layers[l],g=grads[l];
+      for(const kind of ['w','b']){
+        const params=layer[kind],grad=g[kind],m=layer['m'+kind],v=layer['v'+kind];
+        for(let k=0;k<params.length;k++){
+          m[k]=b1*m[k]+(1-b1)*grad[k];v[k]=b2*v[k]+(1-b2)*grad[k]*grad[k];
+          params[k]-=learningRate*(m[k]/correction1)/(Math.sqrt(v[k]/correction2)+1e-8);
+        }
+      }
+    }
+    return {loss:totalLoss/items.length,sample};
+  }
+}
+class DQN {
+  constructor(lr=0.001){
+    this.lr=lr;this.online=new TinyMLP();this.target=new TinyMLP(this.online);
+    this.memory=[];this.memoryAt=0;this.maxMemory=6000;
+    this.gamma=.97;this.epsilon=1;this.decay=.985;this.minEpsilon=.03;
+    this.trainCounter=0;this.stepCounter=0;this.loss=null;this.lastSample=null;
+  }
+  copyTarget(){this.target.copyFrom(this.online)}
+  qValues(state,net=this.online){return Array.from(net.forward(state))}
+  decide(state,explore=true){
+    const qs=this.qValues(state),greedy=qs.indexOf(Math.max(...qs));
+    const random=explore&&Math.random()<this.epsilon;
+    return {action:random?Math.floor(Math.random()*3):greedy,qs,random};
+  }
+  remember(s,a,r,ns,done){
+    const record={s,a,r,ns,done};
+    if(this.memory.length<this.maxMemory)this.memory.push(record);
+    else this.memory[this.memoryAt]=record;
+    this.memoryAt=(this.memoryAt+1)%this.maxMemory;this.stepCounter++;
+  }
+  async learn(){
+    if(this.memory.length<96)return;
+    const items=Array.from({length:32},()=>this.memory[Math.floor(Math.random()*this.memory.length)]);
+    const result=this.online.trainExamples(items,this.target,this.gamma,this.lr);
+    this.lastSample=result.sample;
+    this.loss=this.loss===null?result.loss:.9*this.loss+.1*result.loss;
+    this.trainCounter++;
+    if(this.trainCounter%100===0)this.copyTarget();
+  }
+  finishEpisode(){this.epsilon=Math.max(this.minEpsilon,this.epsilon*this.decay)}
+  dispose(){this.memory.length=0}
+}
+// ===========================================================
+// 3. UI and interactive training loops
+// ===========================================================
+let game=new Breakout(),agent=null,mode='human',paused=false,runner=null,cancel=false;
+let history=[],trainingEpisodes=0,modeMessage='Waiting';
+let lastDecision=null,keys={left:false,right:false},lastFrame=0,animationIndex=0,gameOverAt=0;
+const canvas=$('game'),ctx=canvas.getContext('2d');
+const bcolors=['#ff828e','#ffb775','#f6d675','#5dd6ca'];
+function drawGame(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0b1527';ctx.fillRect(0,0,W,H);
+  // faint background grid
+  ctx.strokeStyle='#142239';ctx.lineWidth=1;
+  for(let x=0;x<=W;x+=26){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<=H;y+=26){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  for(const br of game.bricks){if(!br.alive)continue;ctx.fillStyle=bcolors[br.r];ctx.shadowColor=bcolors[br.r]+'55';ctx.shadowBlur=8;ctx.beginPath();ctx.roundRect(br.x,br.y,br.w,br.h,3);ctx.fill();ctx.shadowBlur=0;}
+  // predicted landing point to explain the agent's observation
+  if(mode==='ai'&&game.ball.vy>0){
+    const projected=projectX(game.ball.x,game.ball.vx,game.ball.vy,game.ball.y);
+    ctx.setLineDash([4,5]);ctx.strokeStyle='#87b5ed77';ctx.beginPath();ctx.moveTo(projected,PY-15);ctx.lineTo(projected,PY+13);ctx.stroke();ctx.setLineDash([]);
+  }
+  ctx.fillStyle='#7fb6ff';ctx.shadowColor='#66a9ff';ctx.shadowBlur=15;
+  ctx.beginPath();ctx.roundRect(game.px,PY,PW,11,6);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle='#fff';ctx.shadowBlur=16;ctx.shadowColor='#ffffffbb';ctx.beginPath();ctx.arc(game.ball.x,game.ball.y,BR,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  if(game.done){
+    ctx.fillStyle='#07111cbd';ctx.fillRect(0,145,W,95);
+    ctx.fillStyle='#f3fbff';ctx.font='bold 25px system-ui';ctx.textAlign='center';
+    ctx.fillText(game.bricksLeft===0?'WALL CLEARED!':'EPISODE FINISHED',W/2,182);
+    ctx.font='14px system-ui';ctx.fillStyle='#aac1db';ctx.fillText('Restart or run the next episode',W/2,210);ctx.textAlign='start';
+  }
+  $('scoreOverlay').textContent=`Score ${game.score} · ${game.bricksLeft} bricks · ${game.steps} steps`;
+}
+function setupNetworkDiagram(){
+  const svg=$('networkSvg');
+  const ys=(n)=>Array.from({length:n},(_,i)=>14+i*102/(n-1));
+  let out='';const layers=[{x:37,ys:ys(7),color:'#6db5ff'},{x:182,ys:ys(6),color:'#aa95ed'},{x:325,ys:ys(6),color:'#aa95ed'},{x:465,ys:ys(3),color:'#4bd7bc'}];
+  for(let l=0;l<3;l++)for(const y of layers[l].ys)for(const ny of layers[l+1].ys)out+=`<path d="M${layers[l].x},${y} L${layers[l+1].x},${ny}" stroke="#6885ac" stroke-opacity=".19" stroke-width="1"/>`;
+  layers.forEach((l,i)=>l.ys.forEach((y,j)=>{out+=`<circle cx="${l.x}" cy="${y}" r="${i===3?7:4.5}" fill="${l.color}" opacity="${i===3?1:.85}" id="networkNode-${i}-${j}"/>`}));
+  svg.innerHTML=out;
+}
+function updateQ(decision){
+  if(!decision)return;
+  const vals=decision.qs,low=Math.min(0,...vals),high=Math.max(0,...vals),span=high-low||1;
+  document.querySelectorAll('.barline').forEach(el=>el.classList.toggle('chosen',+el.dataset.i===decision.action));
+  for(let i=0;i<3;i++){
+    $('q'+i).textContent=vals[i].toFixed(3);
+    $('qbar'+i).style.width=(Math.max(4,100*(vals[i]-low)/span))+'%';
+    const dot=$(`networkNode-3-${i}`);if(dot){dot.setAttribute('fill',i===decision.action?'#4bd7bc':'#6f8198');dot.setAttribute('r',i===decision.action?9:7)}
+  }
+  const why=decision.human?'human keyboard control':decision.random?'exploration — random':'exploitation — highest Q';
+  $('decisionInfo').innerHTML=`Predicted best action: <b>${ACTIONS[vals.indexOf(Math.max(...vals))]}</b> · Chosen: <b class="${decision.random?'':'ok'}">${ACTIONS[decision.action]}</b> (${why}).`;
+}
+function drawChart(){
+  const c=$('rewardChart'),g=c.getContext('2d'),ww=c.width,hh=c.height;
+  g.clearRect(0,0,ww,hh);g.fillStyle='#101a2b';g.fillRect(0,0,ww,hh);
+  const pad={l:45,r:15,t:14,b:26},pw=ww-pad.l-pad.r,ph=hh-pad.t-pad.b;
+  const arr=history.slice(-180),rewards=arr.map(q=>q.reward),avgs=arr.map(q=>q.avg);
+  const lo=Math.min(-8,...rewards,...avgs),hi=Math.max(14,...rewards,...avgs),range=hi-lo||1;
+  g.textAlign='right';g.font='11px system-ui';
+  for(let i=0;i<=4;i++){const yy=pad.t+ph*i/4;g.strokeStyle='#293853';g.beginPath();g.moveTo(pad.l,yy);g.lineTo(pad.l+pw,yy);g.stroke();g.fillStyle='#94a7c0';g.fillText((hi-range*i/4).toFixed(0),pad.l-9,yy+4)}
+  if(!arr.length){g.textAlign='center';g.fillStyle='#8ca0bc';g.font='14px system-ui';g.fillText('Training rewards will appear here',ww/2,hh/2);return}
+  const point=(i,v)=>({x:pad.l+(arr.length===1?.5:i/(arr.length-1))*pw,y:pad.t+ph*(hi-v)/range});
+  for(let s=0;s<2;s++){
+    g.strokeStyle=s===0?'#ffbd6b':'#4bd7bc';g.lineWidth=s===0?1.3:2.5;g.globalAlpha=s===0?.5:1;g.beginPath();
+    (s===0?rewards:avgs).forEach((v,i)=>{const p=point(i,v);if(i===0)g.moveTo(p.x,p.y);else g.lineTo(p.x,p.y)});g.stroke();
+  }
+  g.globalAlpha=1;g.fillStyle='#94a7c0';g.font='11px system-ui';g.textAlign='center';g.fillText(`Most recent ${arr.length} episodes →`,ww/2,hh-6);
+}
+function updateMath(){
+  const box=$('mathBox');box.classList.toggle('hidden',!$('showMath').checked);
+  if(!$('showMath').checked)return;
+  if(!agent?.lastSample){box.textContent='Collect 96 experiences to begin training, then this panel will show a real sampled transition.';return}
+  const s=agent.lastSample;
+  box.textContent=`Sampled action: ${ACTIONS[s.action]}\nCurrent predicted Q: ${s.old.toFixed(3)}\nImmediate reward r: ${s.r.toFixed(3)}\nFuture best target-network Q: ${s.maxNext.toFixed(3)}\nγ = ${s.discount.toFixed(3)}, terminal = ${s.done}\n\nBellman target y = r + (terminal ? 0 : γ × max Q_target(s′))\ny = ${s.target.toFixed(3)}\n\nThe online network is updated toward this target using a minibatch.`;
+}
+function renderInfo(){
+  $('lastReward').textContent='Last reward: '+(game.lastReward>=0?'+':'')+game.lastReward.toFixed(3);
+  $('lastEvent').textContent=game.lastEvent;
+  $('replayCount').textContent='Replay: '+(agent?.memory.length||0)+' / 6,000';
+  $('episodeStat').textContent=trainingEpisodes;
+  $('episodeTag').textContent='Episode '+trainingEpisodes;
+  $('epsStat').textContent=agent?agent.epsilon.toFixed(2):'—';
+  $('lossStat').textContent=agent&&agent.loss!==null?agent.loss.toFixed(3):'—';
+  const n=history.slice(-20);$('avgStat').textContent=n.length?(n.reduce((a,b)=>a+b.reward,0)/n.length).toFixed(1):'—';
+  $('runMessage').textContent=modeMessage;
+  $('gameMode').textContent=mode==='human'?'HUMAN MODE':'DQN MODE';
+  $('gameHelp').textContent=mode==='human'?'Use ← and → (or A and D) to move your paddle.':'The DQN predicts Q-values for LEFT, STAY and RIGHT; it can explore or follow the highest value.';
+  $('epsilonOut').textContent=agent?agent.epsilon.toFixed(2):$('epsilon').value;
+  $('epsilon').value=agent?agent.epsilon:parseFloat($('epsilon').value);
+  updateMath();drawGame();
+}
+function addHistory(){
+  trainingEpisodes++;
+  const prev=history.slice(-19).map(p=>p.reward),avg=([...prev,game.totalReward].reduce((a,b)=>a+b,0))/(prev.length+1);
+  history.push({reward:game.totalReward,avg,score:game.score});
+  if(history.length>5000)history.shift();
+  const last20=history.slice(-20);const mean=last20.reduce((a,b)=>a+b.reward,0)/last20.length;
+  $('resultsNote').textContent=`Last try: ${game.score}/${NUM_BRICKS} bricks · ${game.totalReward.toFixed(1)} total reward · ${game.steps} steps. Recent mean: ${mean.toFixed(1)}. Train multiple times before drawing conclusions.`;
+  drawChart();
+}
+function setMode(next){mode=next;$('humanBtn').classList.toggle('active',mode==='human');$('aiBtn').classList.toggle('active',mode==='ai');}
+function doTransition(decision,learnAllowed,recordAllowed){
+  const s=game.observe();const res=game.step(decision.action,$('shaping').checked&&learnAllowed);
+  if(recordAllowed&&agent)agent.remember(s,decision.action,res.reward,game.observe(),res.done);
+  lastDecision=decision;updateQ(decision);
+  const seq=document.querySelectorAll('.seqitem');seq.forEach((el,i)=>el.classList.toggle('on',i===((animationIndex++)%8)));
+  $('stepInfo').textContent=`State: ball (${Math.round(game.ball.x)}, ${Math.round(game.ball.y)}) → action ${ACTIONS[decision.action]} → reward ${res.reward.toFixed(3)}. ${res.event}. ${agent?.memory.length||0} experiences saved.`;
+  return res;
+}
+async function stopRunner(){
+  cancel=true;
+  if(runner){try{await runner}catch(err){console.error(err)}runner=null;}
+  cancel=false;
+}
+function recordManual(action){
+  const state=game.observe();
+  if(agent){
+    const decision={action,qs:agent.qValues(state),random:false,human:true};
+    lastDecision=decision;
+    // Only refresh this more expensive explanatory panel periodically.
+    if(game.steps%8===0)updateQ(decision);
+  }
+  const res=game.step(action,false);
+  if(agent)agent.remember(state,action,res.reward,game.observe(),res.done); // off-policy examples; don't update weights here
+  if(res.done){gameOverAt=performance.now();modeMessage=`You cleared ${game.score} bricks. New game starts automatically in 1.5 seconds — or press Restart.`;renderInfo();}
+}
+function episodeEnd(){addHistory();agent.finishEpisode();}
+async function startRun(episodes,{watch=false,evalOnly=false}={}){
+  await stopRunner();
+  if(!agent){modeMessage='Initializing the neural network. Try again.';renderInfo();return;}
+  setMode('ai');paused=false;$('pauseBtn').textContent='Pause';cancel=false;game.reset();
+  const title=evalOnly?'Testing trained AI':watch?'Watching an episode':`Training ${episodes} episodes`;
+  modeMessage=title+'…';renderInfo();
+  const myRun=(async()=>{
+    let finished=0,frames=0;
+    while(!cancel&&finished<episodes){
+      if(paused){await sleep(60);continue}
+      if(game.done){
+        if(!evalOnly)episodeEnd();
+        finished++;
+        modeMessage=evalOnly?`Test complete: ${game.score} bricks, reward ${game.totalReward.toFixed(1)} (not added to training).`:(episodes===Infinity?`AI learning continuously · ${finished} ${finished===1?'episode':'episodes'} finished`:`${title} · ${finished}/${episodes} finished`);
+        renderInfo();
+        if(finished===episodes)break;
+        game.reset();
+      }
+      const s=game.observe();
+      const decision=agent.decide(s,!evalOnly);
+      doTransition(decision,!evalOnly,!evalOnly);
+      if(!evalOnly&&agent.stepCounter%12===0)await agent.learn();
+      frames++;
+      const n=watch||evalOnly?Math.max(1,Math.round(+$('speed').value/2)):Math.max(8,Math.round(+$('speed').value*10));
+      if(frames%n===0||game.done){renderInfo();await tick();}
+      // slow watch speed: render in real-time, teaching-friendly
+      if((watch||evalOnly)&&+$('speed').value===1&&frames%2===0)await sleep(20);
+    }
+  })();
+  runner=myRun;
+  try{await myRun}catch(err){console.error(err);modeMessage='Error: '+err.message; $('ready').textContent='Check browser console';}
+  finally{
+    if(runner===myRun)runner=null;
+    if(!cancel&&!modeMessage.startsWith('Error')){
+      if(!evalOnly)modeMessage=title+' finished. Compare the chart, or test without exploration.';
+      else modeMessage=`Test finished: ${game.score} bricks destroyed, reward ${game.totalReward.toFixed(1)}. Training unchanged.`;
+    }
+    renderInfo();
+  }
+}
+async function oneStep(){
+  await stopRunner();if(!agent)return;
+  setMode('ai');if(game.done)game.reset();
+  const s=game.observe(),d=agent.decide(s,true);
+  const r=doTransition(d,true,true);
+  if(agent.stepCounter%12===0)await agent.learn();
+  if(r.done)episodeEnd();
+  modeMessage='One step: '+ACTIONS[d.action]+'. Continue stepping or train for many episodes.';
+  renderInfo();
+}
+async function resetLearning(){
+  await stopRunner();paused=false;$('pauseBtn').textContent='Pause';
+  if(agent)agent.dispose();
+  agent=new DQN(parseFloat($('lr').value));
+  agent.gamma=parseFloat($('gamma').value);agent.epsilon=parseFloat($('epsilon').value);agent.decay=parseFloat($('decay').value);
+  trainingEpisodes=0;history=[];game.reset();lastDecision=null;
+  modeMessage='Fresh neural network initialized. All Q-values start from random network weights.';
+  drawChart();renderInfo();
+}
+function humanFrame(time){
+  if(mode==='human'&&!paused&&!runner&&time-lastFrame>16.3){
+    lastFrame=time;
+    if(!game.done)recordManual(keys.left&&!keys.right?0:keys.right&&!keys.left?2:1);
+    else if(gameOverAt&&time-gameOverAt>1500){game.reset();gameOverAt=0;modeMessage='New round! Use ← / → or A / D to move.';renderInfo();}
+  }
+  if(mode==='human'&&!runner)drawGame();
+  requestAnimationFrame(humanFrame);
+}
+function bind(){
+  $('humanBtn').onclick=async()=>{await stopRunner();setMode('human');paused=false;$('pauseBtn').textContent='Pause';game.reset();modeMessage='Manual mode. Use your keyboard to move the paddle.';renderInfo()};
+  $('aiBtn').onclick=()=>startRun(Infinity,{watch:true});
+  $('autoBtn').onclick=()=>startRun(Infinity,{watch:true});
+  $('stepBtn').onclick=oneStep;
+  $('watchBtn').onclick=()=>startRun(1,{watch:true});
+  $('train100').onclick=()=>startRun(100);
+  $('train1000').onclick=()=>startRun(1000);
+  $('testBtn').onclick=()=>startRun(1,{watch:true,evalOnly:true});
+  $('pauseBtn').onclick=()=>{paused=!paused;$('pauseBtn').textContent=paused?'Resume':'Pause';modeMessage=paused?'Paused. Resume whenever you are ready.':'Resumed.';renderInfo()};
+  $('newEpisode').onclick=async()=>{await stopRunner();game.reset();gameOverAt=0;paused=false;$('pauseBtn').textContent='Pause';setMode('human');modeMessage='Game restarted! Press ← / → (or A / D) to move.';renderInfo()};
+  $('forgetBtn').onclick=async()=>{if(!confirm('Erase the learned network, replay memory, and training history?'))return;await resetLearning()};
+  const labels=[['lr',4],['gamma',3],['decay',3]];
+  labels.forEach(([id,digits])=>{$(id).addEventListener('input',()=>{$(id+'Out').textContent=(+$(id).value).toFixed(digits);if(agent&&id!=='lr')agent[id]=+$(id).value})});
+  $('epsilon').addEventListener('input',()=>{if(agent)agent.epsilon=+$('epsilon').value;$('epsilonOut').textContent=(+$('epsilon').value).toFixed(2)});
+  $('showMath').onchange=updateMath;
+  document.addEventListener('keydown',ev=>{
+    if(['ArrowLeft','ArrowRight',' ','a','d','A','D'].includes(ev.key)&&!['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))ev.preventDefault();
+    if(ev.key==='ArrowLeft'||ev.key.toLowerCase()==='a')keys.left=true;
+    if(ev.key==='ArrowRight'||ev.key.toLowerCase()==='d')keys.right=true;
+    if(ev.key===' '&&ev.repeat===false&&document.activeElement.tagName!=='BUTTON')$('pauseBtn').click();
+  });
+  document.addEventListener('keyup',ev=>{if(ev.key==='ArrowLeft'||ev.key.toLowerCase()==='a')keys.left=false;if(ev.key==='ArrowRight'||ev.key.toLowerCase()==='d')keys.right=false});
+  window.addEventListener('blur',()=>{keys.left=false;keys.right=false});
+}
+async function init(){
+  setupNetworkDiagram();drawGame();drawChart();bind();
+  try{
+    agent=new DQN();
+    $('ready').textContent='DQN ready · works offline';
+    $('readyDot').style.background='#4bd7bc';$('readyDot').style.boxShadow='0 0 10px #4bd7bc88';
+    modeMessage='Playing in Human mode. Use ← / → or A / D. Click Round 2 to automatically watch the AI learn.';
+  }catch(err){console.error(err);$('ready').textContent='DQN initialization failed';modeMessage=err.message;}
+  renderInfo();requestAnimationFrame(humanFrame);
+}
+init();
+</script>
+</body>
+</html>
